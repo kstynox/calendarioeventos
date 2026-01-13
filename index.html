@@ -1,0 +1,1946 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calendario de Cumpleaños – SENA</title>
+
+  <style>
+    :root{
+      --bg: #f2f4f7;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --border: #e5e7eb;
+      --shadow: 0 8px 30px rgba(15, 23, 42, 0.12);
+      --shadow-soft: 0 6px 18px rgba(15, 23, 42, 0.10);
+      --sena: #39A900;
+      --radius: 14px;
+
+      /* Print layout */
+      --pm: 8mm;                 /* márgenes del PDF (printer margin) */
+      --ph: 18mm;                /* alto del encabezado por página */
+      --pgap: 4px;               /* gap entre tarjetas en PDF */
+
+      /* Print typography base (se ajusta por densidad global pd-2/pd-3/pd-4) */
+      --p-month-title: 0.64rem;
+      --p-month-icon: 0.70rem;
+      --p-count: 0.56rem;
+
+      --p-badge: 0.58rem;
+      --p-badge-w: 18px;
+      --p-badge-h: 14px;
+
+      --p-age: 0.56rem;
+      --p-name: 0.62rem;
+      --p-body-pad: 2mm;
+      --p-body-gap: 1.5mm;
+      --p-entry-pad-y: 1.2mm;
+      --p-entry-pad-x: 1.5mm;
+    }
+
+    *{ box-sizing:border-box; }
+    html, body{ height:100%; }
+    body{
+      margin:0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 18px;
+    }
+    .page{ max-width: 1200px; margin: 0 auto; }
+
+    /* Header (pantalla) */
+    .top-header{
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px 18px;
+      display:grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 14px;
+      align-items:center;
+      margin: 0 0 16px 0;
+    }
+    .brand{ display:flex; align-items:center; gap: 12px; min-width: 280px; }
+    .brand img{ width: 62px; height: auto; display:block; }
+    .brand-lines{ display:flex; flex-direction:column; gap: 2px; line-height: 1.15; }
+    .brand-lines .l1{
+      font-weight: 900; letter-spacing: 0.01em; text-transform: uppercase;
+      font-size: 0.86rem; color: var(--muted);
+    }
+    .brand-lines .l2{ font-weight: 950; font-size: 1.03rem; }
+    .brand-lines .l3{ font-weight: 850; font-size: 0.92rem; color: var(--muted); }
+
+    .header-center{
+      display:flex; flex-direction:column; align-items:flex-end; justify-content:center;
+      gap: 6px; text-align:right;
+    }
+    .header-center .title{
+      font-size: 1.1rem; font-weight: 950; letter-spacing: 0.02em;
+      text-transform: uppercase; line-height: 1.15;
+      white-space: nowrap;
+    }
+    .header-center .subtitle{
+      font-size: 0.92rem; color: var(--muted); font-weight: 700;
+    }
+
+    /* Report badges (HTML) */
+    .report-badges{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 8px;
+      justify-content:flex-end;
+    }
+    .report-badges.left{ justify-content:flex-start; }
+    .stat-badge{
+      display:inline-flex;
+      align-items:center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(57,169,0,0.10);
+      border: 1px solid rgba(57,169,0,0.28);
+      color: #14532d;
+      font-weight: 900;
+      font-size: 0.84rem;
+      white-space: nowrap;
+    }
+    .stat-badge .k{ color: #166534; letter-spacing: 0.01em; }
+    .stat-badge .v{ color: #0f172a; }
+
+    /* Controls */
+    .controls{
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px 18px;
+      margin: 0 0 16px 0;
+    }
+    .controls h2{ margin: 0 0 8px 0; font-size: 1.05rem; font-weight: 950; }
+    .controls p{ margin: 0 0 12px 0; color: var(--muted); font-weight: 650; line-height: 1.35; }
+    .grid-controls{ display:grid; grid-template-columns: 1.2fr 0.8fr; gap: 14px; }
+
+    @media (max-width: 980px){
+      .top-header{ grid-template-columns: 1fr; }
+      .header-center{ align-items:flex-start; text-align:left; }
+      .report-badges{ justify-content:flex-start; }
+      .grid-controls{ grid-template-columns: 1fr; }
+      body{ padding: 12px; }
+    }
+
+    textarea{
+      width:100%;
+      min-height: 170px;
+      resize: vertical;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.95rem;
+      line-height: 1.35;
+      outline: none;
+      background: #fff;
+    }
+    textarea:focus{
+      border-color: rgba(57,169,0,0.55);
+      box-shadow: 0 0 0 4px rgba(57,169,0,0.15);
+    }
+
+    .row{ display:flex; flex-wrap:wrap; gap: 10px; align-items:center; margin-top: 10px; }
+
+    button{
+      appearance:none;
+      border: 1px solid rgba(46,125,0,0.25);
+      background: linear-gradient(180deg, rgba(57,169,0,1), rgba(46,125,0,1));
+      color:#fff;
+      font-weight: 950;
+      padding: 10px 14px;
+      border-radius: 12px;
+      cursor:pointer;
+      box-shadow: 0 10px 18px rgba(46,125,0,0.20);
+      letter-spacing: 0.01em;
+    }
+    button:hover{ filter: brightness(1.02); }
+    button:active{ transform: translateY(1px); }
+    .secondary{
+      background: #ffffff;
+      color: var(--text);
+      border: 1px solid var(--border);
+      box-shadow: 0 8px 16px rgba(15, 23, 42, 0.06);
+    }
+
+    label{ font-weight: 850; font-size: 0.9rem; color: var(--text); }
+    input[type="number"]{
+      width: 180px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid #cbd5e1;
+      outline: none;
+      font-size: 0.95rem;
+      background:#fff;
+      font-weight: 850;
+      color: var(--text);
+    }
+    input[type="number"]:focus{
+      border-color: rgba(57,169,0,0.55);
+      box-shadow: 0 0 0 4px rgba(57,169,0,0.15);
+    }
+
+    .hint{
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 650;
+      line-height: 1.35;
+      background: #f8fafc;
+      border: 1px dashed #d1d5db;
+      padding: 10px 12px;
+      border-radius: 12px;
+    }
+
+    .errors{
+      margin-top: 10px;
+      display:none;
+      background: #FEF2F2;
+      border: 1px solid #FCA5A5;
+      color: #991B1B;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-weight: 750;
+    }
+    .errors ul{ margin: 8px 0 0 18px; }
+
+    /* Screen vs Print sections */
+    .print-only{ display:none; }
+    .screen-only{ display:block; }
+
+    /* Calendar (screen) */
+    .calendar{
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px 18px 18px 18px;
+    }
+    .calendar-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      gap: 10px;
+      flex-wrap:wrap;
+      margin-bottom: 12px;
+    }
+    .calendar-top h2{ margin:0; font-size: 1.1rem; font-weight: 950; letter-spacing: 0.01em; }
+    .calendar-top .note{ color: var(--muted); font-weight: 750; font-size: 0.92rem; }
+
+    .months-grid{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(320px, 1fr));
+      gap: 14px;
+    }
+    @media (max-width: 1060px){
+      .months-grid{ grid-template-columns: repeat(2, minmax(300px, 1fr)); }
+    }
+    @media (max-width: 680px){
+      .months-grid{ grid-template-columns: 1fr; }
+    }
+
+    /* Month card (shared) */
+    .month-card{
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow:hidden;
+      box-shadow: var(--shadow-soft);
+      background: #fff;
+      min-height: 220px;
+      display:flex;
+      flex-direction:column;
+    }
+    .month-card__head{
+      position: relative;
+      padding: 10px 12px;
+      color: #fff;
+      background: linear-gradient(90deg, rgba(57,169,0,1), rgba(46,125,0,1));
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+    }
+    .month-title{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap: 8px;
+      font-weight: 950;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      font-size: 0.98rem;
+      padding: 0 52px;
+      width: 100%;
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+    }
+    .month-title .icon{ font-size: 1.15rem; line-height: 1; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.18)); }
+
+    .month-card__head .count{
+      position:absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-weight: 950;
+      font-size: 0.88rem;
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.30);
+      padding: 5px 10px;
+      border-radius: 999px;
+      white-space:nowrap;
+    }
+    .month-card.dense-15 .month-card__head .count{
+      background: rgba(255,255,255,0.22);
+      border-color: rgba(255,255,255,0.38);
+    }
+    .month-card.dense-25 .month-card__head .count{
+      background: rgba(255,255,255,0.25);
+      border-color: rgba(255,255,255,0.45);
+    }
+
+    .month-card__body{
+      padding: 12px;
+      display:flex;
+      flex-direction:column;
+      gap: 8px;
+      flex: 1;
+    }
+    .month-card__body.cols-2,
+    .month-card__body.cols-3{
+      display:grid;
+      align-content:start;
+      grid-auto-rows: min-content;
+      gap: 10px;
+    }
+    .month-card__body.cols-2{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .month-card__body.cols-3{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+    .entry{
+      display:flex;
+      align-items:flex-start;
+      gap: 10px;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid #eef2ff;
+      background: #f8fafc;
+      min-width: 0;
+    }
+    .badge{
+      min-width: 44px;
+      height: 34px;
+      border-radius: 10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight: 950;
+      color: #fff;
+      background: var(--sena);
+      box-shadow: 0 10px 16px rgba(57,169,0,0.18);
+      flex: 0 0 auto;
+      font-size: 0.92rem;
+    }
+    .who{
+      font-weight: 900;
+      line-height: 1.2;
+      word-break: break-word;
+      display:flex;
+      align-items:baseline;
+      gap: 8px;
+      min-width: 0;
+    }
+    .age-num{
+      display:none; /* print only */
+      align-items:center;
+      justify-content:center;
+      min-width: 28px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: rgba(57,169,0,0.12);
+      border: 1px solid rgba(57,169,0,0.35);
+      color: #14532d;
+      font-weight: 950;
+      font-size: 0.82rem;
+      flex: 0 0 auto;
+    }
+    .name-text{ min-width: 0; overflow-wrap:anywhere; }
+    .meta{
+      color: var(--muted);
+      font-weight: 750;
+      font-size: 0.9rem;
+      margin-top: 2px;
+    }
+
+    /* Density tweaks (screen) */
+    .month-card.dense-15 .name-text{ font-size: 0.78rem; }
+    .month-card.dense-15 .meta{ font-size: 0.76rem; }
+    .month-card.dense-15 .badge{ font-size: 0.78rem; min-width: 40px; height: 30px; }
+
+    .month-card__body.cols-3 .name-text{ font-size: 0.74rem; }
+    .month-card__body.cols-3 .meta{ font-size: 0.72rem; }
+    .month-card__body.cols-3 .badge{ font-size: 0.82rem; min-width: 40px; height: 30px; }
+
+    .month-card.dense-15 .month-card__body.cols-3 .name-text{ font-size: 0.70rem; }
+    .month-card.dense-15 .month-card__body.cols-3 .meta{ font-size: 0.68rem; }
+    .month-card.dense-15 .month-card__body.cols-3 .badge{ font-size: 0.72rem; min-width: 36px; height: 28px; }
+
+    .no-data{
+      color: var(--muted);
+      font-weight: 800;
+      border: 1px dashed #d1d5db;
+      background: #fff;
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    /* Footer (HTML only) */
+    .sena-footer{
+      margin-top: 16px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap: 10px;
+    }
+    .sena-footer .caption{
+      font-size: 0.78rem;
+      font-weight: 850;
+      letter-spacing: 0.22em;
+      color: #94a3b8;
+      text-transform: uppercase;
+      text-align:center;
+    }
+    .sena-footer .pill{
+      width: min(720px, 100%);
+      background: #eef2f7;
+      border: 1px solid #e2e8f0;
+      border-radius: 999px;
+      padding: 12px 14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      box-shadow: 0 12px 26px rgba(15, 23, 42, 0.10);
+    }
+    .sena-footer .left-icon,
+    .sena-footer .right-icon{
+      width: 44px;
+      height: 44px;
+      border-radius: 999px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight: 950;
+      user-select:none;
+    }
+    .sena-footer .left-icon{
+      background: #fb923c;
+      color: #fff;
+      box-shadow: 0 12px 18px rgba(251,146,60,0.25);
+      font-size: 1.1rem;
+    }
+    .sena-footer .right-icon{
+      background: #e0ecff;
+      color: #1d4ed8;
+      border: 1px solid #c7d2fe;
+      font-size: 1.05rem;
+    }
+    .sena-footer .text{
+      flex: 1;
+      display:flex;
+      flex-direction:column;
+      gap: 2px;
+      min-width: 180px;
+    }
+    .sena-footer .role{
+      font-size: 0.78rem;
+      font-weight: 900;
+      color: #64748b;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      line-height: 1.15;
+    }
+    .sena-footer .name{
+      font-size: 0.98rem;
+      font-weight: 950;
+      color: #0f172a;
+      line-height: 1.15;
+    }
+
+    /* ==========================
+       PDF PREVIEW MODE (screen)
+       ========================== */
+    .preview-wrap{ display:none; }
+    html.preview-mode .calendar.screen-only{ display:none; }
+    html.preview-mode .preview-wrap{ display:block; }
+
+    .preview-wrap{
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px 14px 18px 14px;
+      margin-bottom: 16px;
+    }
+    .preview-toolbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      flex-wrap:wrap;
+      margin-bottom: 12px;
+    }
+    .preview-toolbar .label{
+      font-weight: 950;
+      letter-spacing: 0.01em;
+    }
+    .preview-toolbar .meta{
+      margin: 0;
+      font-size: 0.88rem;
+      color: var(--muted);
+      font-weight: 750;
+    }
+
+    .preview-viewport{
+      width: 100%;
+      overflow: auto;
+      background: #eef2f7;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .sheet{
+      width: 279.4mm;
+      height: 215.9mm;
+      background:#fff;
+      margin: 0 auto 14px auto;
+      border-radius: 10px;
+      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.18);
+      overflow: hidden;
+      transform-origin: top left;
+    }
+    .sheet-inner{
+      width: 279.4mm;
+      height: 215.9mm;
+      padding: var(--pm);
+    }
+    /* In preview mode we want to apply the print page layout, but visible on screen */
+    html.preview-mode .print-page{
+      height: calc(215.9mm - (var(--pm) * 2));
+      display:flex;
+      flex-direction:column;
+    }
+    html.preview-mode .page-header-print{
+      height: var(--ph);
+      display:grid;
+      grid-template-columns: 1.25fr 0.75fr;
+      gap: 6px;
+      align-items:center;
+      border-bottom: 1px solid var(--border);
+      padding: 1.8mm 2.5mm;
+    }
+    html.preview-mode .page-header-print .brand img{ width: 28px; }
+    html.preview-mode .page-header-print .brand{ gap: 7px; }
+    html.preview-mode .page-header-print .brand-lines .l1{ font-size: 0.52rem; }
+    html.preview-mode .page-header-print .brand-lines .l2{ font-size: 0.66rem; }
+    html.preview-mode .page-header-print .brand-lines .l3{ font-size: 0.58rem; }
+    html.preview-mode .page-header-print .header-center{ align-items:flex-end; gap: 2px; }
+    html.preview-mode .page-header-print .header-center .title{ font-size: 0.70rem; font-weight: 950; text-transform: uppercase; white-space: nowrap; overflow:hidden; text-overflow: ellipsis; }
+    html.preview-mode .page-header-print .header-center .subtitle{ display:none; }
+    html.preview-mode .page-header-print .report-badges{
+      display:flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 3px;
+      min-width: 0;
+    }
+    html.preview-mode .page-header-print .stat-badge{
+      display:inline-flex;
+      align-items:center;
+      gap: 4px;
+      padding: 1px 4px;
+      font-size: 0.50rem;
+      border-radius: 999px;
+      flex: 0 0 auto;
+      min-width: 0;
+      max-width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    html.preview-mode .page-header-print .stat-badge.long{
+      flex: 1 1 auto;
+    }
+    html.preview-mode .page-header-print .stat-badge.long .v{
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+      .page-header-print .stat-badge.long{
+        flex: 1 1 auto;
+      }
+      .page-header-print .stat-badge.long .v{
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+
+    html.preview-mode .print-grid{
+      flex: 1 1 auto;
+      min-height: 0;
+      display:grid;
+      grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr));
+      grid-template-rows: repeat(var(--rows, 3), minmax(0, 1fr));
+      gap: var(--pgap);
+      padding: 3mm 0 0 0;
+      align-items: stretch;
+      align-content: stretch;
+    }
+    html.preview-mode .print-grid .month-card{ height: 100%; min-height: 0; box-shadow: none; border-radius: 9px; }
+
+    html.preview-mode .print-grid .month-card__head{ padding: 2.0mm 2mm; }
+    html.preview-mode .print-grid .month-title{ font-size: var(--p-month-title); padding: 0 14px; gap: 3px; }
+    html.preview-mode .print-grid .month-title .icon{ font-size: var(--p-month-icon); }
+    html.preview-mode .print-grid .month-card__head .count{ right: 2mm; font-size: var(--p-count); padding: 1px 4px; }
+
+    html.preview-mode .print-grid .month-card__body{ padding: var(--p-body-pad); gap: var(--p-body-gap); min-height: 0; }
+    html.preview-mode .print-grid .entry{ padding: var(--p-entry-pad-y) var(--p-entry-pad-x); border-radius: 6px; gap: 2mm; }
+    html.preview-mode .print-grid .badge{ min-width: var(--p-badge-w); height: var(--p-badge-h); border-radius: 5px; font-size: var(--p-badge); box-shadow: none; }
+
+    html.preview-mode .age-num{ display:inline-flex; min-width: 14px; padding: 0.6mm 1.1mm; border-radius: 6px; font-size: var(--p-age); background: rgba(57,169,0,0.14); border: 1px solid rgba(57,169,0,0.30); }
+    html.preview-mode .print-grid .who{ gap: 1.5mm; }
+    html.preview-mode .print-grid .name-text{ font-size: var(--p-name); line-height: 1.1; }
+    html.preview-mode .print-grid .meta{ display:none; }
+
+    html.preview-mode .print-grid .month-card.tall-2{ grid-row: span 2; }
+    html.preview-mode .print-grid .month-card.tall-3{ grid-row: span 3; }
+
+    /* PDF preview: enforce one-line clamp for stability (only preview) */
+    html.preview-mode .print-grid .name-text{
+      display:-webkit-box;
+      -webkit-line-clamp: 1;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* ==========================
+       PRINT (PDF)
+       ========================== */
+    @media print{
+      *{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+      @page{
+        size: 279.4mm 215.9mm; /* Letter landscape */
+        margin: var(--pm);
+      }
+
+      html, body{
+        width: 279.4mm;
+        height: 215.9mm;
+        padding: 0 !important;
+        background:#fff !important;
+      }
+
+      .controls{ display:none !important; }
+      .sena-footer{ display:none !important; }
+      .calendar-top{ display:none !important; }
+      .preview-wrap{ display:none !important; }
+
+      .screen-only{ display:none !important; }
+      .print-only{ display:block !important; }
+      .top-header{ display:none !important; }
+
+      .print-pages{ margin: 0; }
+
+      .print-page{
+        height: calc(215.9mm - (var(--pm) * 2));
+        display:flex;
+        flex-direction:column;
+        break-after: page;
+        page-break-after: always;
+      }
+      .print-page:last-child{
+        break-after: auto;
+        page-break-after: auto;
+      }
+
+      .page-header-print{
+        height: var(--ph);
+        display:grid;
+        grid-template-columns: 1.25fr 0.75fr;
+        gap: 6px;
+        align-items:center;
+        border-bottom: 1px solid var(--border);
+        padding: 1.8mm 2.5mm;
+      }
+      .page-header-print .brand img{ width: 28px; }
+      .page-header-print .brand{ gap: 7px; }
+      .page-header-print .brand-lines .l1{ font-size: 0.52rem; }
+      .page-header-print .brand-lines .l2{ font-size: 0.66rem; }
+      .page-header-print .brand-lines .l3{ font-size: 0.58rem; }
+      .page-header-print .header-center{ align-items:flex-end; gap: 2px; }
+      .page-header-print .header-center .title{
+        font-size: 0.70rem;
+        font-weight: 950;
+        text-transform: uppercase;
+        white-space: nowrap;
+        overflow:hidden;
+        text-overflow: ellipsis;
+      }
+      .page-header-print .header-center .subtitle{ display:none; }
+      .page-header-print .report-badges{ justify-content:flex-end; gap: 4px; }
+      .page-header-print .stat-badge{ padding: 2px 5px; font-size: 0.56rem; }
+
+      .print-grid{
+        flex: 1 1 auto;
+        min-height: 0;
+        display:grid;
+        grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr));
+        grid-template-rows: repeat(var(--rows, 3), minmax(0, 1fr));
+        gap: var(--pgap);
+        padding: 3mm 0 0 0;
+        align-items: stretch;
+        align-content: stretch;
+      }
+
+      .print-grid .month-card{
+        height: 100%;
+        min-height: 0;
+        box-shadow: none;
+        border-radius: 9px;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      /* Meses con muchos registros: ganar altura dentro de la grilla */
+      .print-grid .month-card.tall-2{ grid-row: span 2; }
+      .print-grid .month-card.tall-3{ grid-row: span 3; }
+
+      .print-grid .month-card__head{ padding: 2.0mm 2mm; }
+      .print-grid .month-title{
+        font-size: var(--p-month-title);
+        padding: 0 14px;
+        gap: 3px;
+      }
+      .print-grid .month-title .icon{ font-size: var(--p-month-icon); }
+      .print-grid .month-card__head .count{
+        right: 2mm;
+        font-size: var(--p-count);
+        padding: 1px 4px;
+      }
+
+      .print-grid .month-card__body{
+        padding: var(--p-body-pad);
+        gap: var(--p-body-gap);
+        min-height: 0;
+      }
+
+      .print-grid .entry{
+        padding: var(--p-entry-pad-y) var(--p-entry-pad-x);
+        border-radius: 6px;
+        gap: 2mm;
+      }
+
+      .print-grid .badge{
+        min-width: var(--p-badge-w);
+        height: var(--p-badge-h);
+        border-radius: 5px;
+        font-size: var(--p-badge);
+        box-shadow: none;
+      }
+
+      .print-grid .age-num{
+        display:inline-flex;
+        min-width: 14px;
+        padding: 0.6mm 1.1mm;
+        border-radius: 6px;
+        font-size: var(--p-age);
+        background: rgba(57,169,0,0.14);
+        border: 1px solid rgba(57,169,0,0.30);
+      }
+      .print-grid .who{ gap: 1.5mm; }
+
+      /* PDF: clamp 1 line para estabilidad (evita romper alturas) */
+      .print-grid .name-text{
+        font-size: var(--p-name);
+        line-height: 1.1;
+        display:-webkit-box;
+        -webkit-line-clamp: 1;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .print-grid .meta{ display:none; }
+
+      /* 3 columnas internas (>10 registros): badge también se hace más pequeño */
+      .print-grid .month-card__body.cols-3 .name-text{ font-size: calc(var(--p-name) - 0.08rem); }
+      .print-grid .month-card__body.cols-3 .badge{
+        font-size: calc(var(--p-badge) - 0.08rem);
+        min-width: calc(var(--p-badge-w) - 2px);
+        height: calc(var(--p-badge-h) - 2px);
+      }
+
+      /* >15 registros: badge pequeño (además de nombre) */
+      .print-grid .month-card.dense-15 .name-text{ font-size: calc(var(--p-name) - 0.10rem); }
+      .print-grid .month-card.dense-15 .badge{
+        font-size: calc(var(--p-badge) - 0.12rem);
+        min-width: calc(var(--p-badge-w) - 2px);
+        height: calc(var(--p-badge-h) - 2px);
+      }
+      .print-grid .month-card.dense-15 .age-num{ font-size: calc(var(--p-age) - 0.10rem); }
+      .print-grid .month-card.dense-15 .month-card__body{ gap: 1.2mm; }
+      .print-grid .month-card.dense-15 .entry{ padding: 1.0mm 1.3mm; }
+
+      /* >24 registros: badge lo más pequeño posible (legible) + compactación */
+      .print-grid .month-card.dense-25 .month-card__body{ padding: 1.6mm; gap: 0.95mm; }
+      .print-grid .month-card.dense-25 .entry{ padding: 0.85mm 1.05mm; gap: 1.5mm; }
+      .print-grid .month-card.dense-25 .name-text{ font-size: calc(var(--p-name) - 0.18rem); }
+      .print-grid .month-card.dense-25 .age-num{ font-size: calc(var(--p-age) - 0.18rem); }
+      .print-grid .month-card.dense-25 .badge{
+        font-size: 0.42rem;
+        min-width: 14px;
+        height: 11px;
+        border-radius: 4px;
+      }
+      .print-grid .month-card.dense-25 .month-card__head .count{ font-size: calc(var(--p-count) - 0.06rem); }
+
+      /* >=35 registros: aún más compacto */
+      .print-grid .month-card.dense-35 .month-card__body{ padding: 1.4mm; gap: 0.85mm; }
+      .print-grid .month-card.dense-35 .entry{ padding: 0.75mm 0.95mm; gap: 1.2mm; }
+      .print-grid .month-card.dense-35 .name-text{ font-size: calc(var(--p-name) - 0.22rem); }
+      .print-grid .month-card.dense-35 .age-num{ font-size: calc(var(--p-age) - 0.22rem); }
+      .print-grid .month-card.dense-35 .badge{
+        font-size: 0.40rem;
+        min-width: 13px;
+        height: 10px;
+        border-radius: 4px;
+      }
+      .print-grid .month-card.dense-35 .month-card__head .count{ font-size: calc(var(--p-count) - 0.08rem); }
+
+      /* Global density: si hay más hojas, la letra puede ser más grande (para aprovechar espacio) */
+      html.pd-2{
+        --p-month-title: 0.70rem;
+        --p-month-icon: 0.76rem;
+        --p-count: 0.60rem;
+        --p-badge: 0.64rem;
+        --p-age: 0.62rem;
+        --p-name: 0.68rem;
+        --pgap: 5px;
+        --p-body-gap: 1.6mm;
+      }
+      html.pd-3{
+        --p-month-title: 0.76rem;
+        --p-month-icon: 0.84rem;
+        --p-count: 0.64rem;
+        --p-badge: 0.68rem;
+        --p-age: 0.66rem;
+        --p-name: 0.74rem;
+        --pgap: 6px;
+        --p-body-gap: 1.8mm;
+      }
+      html.pd-4{
+        --p-month-title: 0.82rem;
+        --p-month-icon: 0.90rem;
+        --p-count: 0.68rem;
+        --p-badge: 0.72rem;
+        --p-age: 0.70rem;
+        --p-name: 0.80rem;
+        --pgap: 7px;
+        --p-body-gap: 2.0mm;
+      }
+    }
+  
+    /* Modal (recomendaciones de impresión) */
+    .modal{ position: fixed; inset: 0; display:none; z-index: 9999; }
+    .modal[aria-hidden="false"]{ display:block; }
+    .modal__backdrop{ position:absolute; inset:0; background: rgba(2,6,23,0.45); }
+    .modal__panel{
+      position: relative;
+      width: min(760px, calc(100vw - 24px));
+      max-height: calc(100vh - 24px);
+      overflow: auto;
+      margin: 12px auto;
+      background: #fff;
+      border-radius: 16px;
+      border: 1px solid rgba(226,232,240,1);
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35);
+    }
+    .modal__head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: #fff;
+      z-index: 1;
+    }
+    .modal__title{ font-weight: 950; font-size: 1.0rem; letter-spacing: 0.01em; }
+    .modal__close{
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      cursor: pointer;
+      font-weight: 950;
+      box-shadow: 0 10px 16px rgba(15,23,42,0.08);
+    }
+    .modal__body{ padding: 14px 16px 10px 16px; }
+    .modal__actions{
+      display:flex;
+      justify-content:flex-end;
+      gap: 10px;
+      padding: 12px 16px 16px 16px;
+      border-top: 1px solid var(--border);
+    }
+    .modal__note{
+      margin-top: 12px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      font-weight: 650;
+      background: #f8fafc;
+      border: 1px dashed #d1d5db;
+      padding: 10px 12px;
+      border-radius: 12px;
+      line-height: 1.35;
+    }
+    .modal__dontshow{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      margin-top: 10px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    /* Mock UI de impresión (similar a la vista del navegador) */
+    .print-ui{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 720px){
+      .print-ui{ grid-template-columns: 1fr; }
+    }
+    .print-ui__section{
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: #fff;
+    }
+    .print-ui__label{
+      font-size: 0.88rem;
+      font-weight: 950;
+      margin-bottom: 8px;
+      color: #0f172a;
+    }
+    .print-ui__box{ display:flex; flex-direction:column; gap: 8px; }
+    .print-ui__select{
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 10px 10px;
+      font-weight: 850;
+      color: #0f172a;
+      background: #fff;
+    }
+    .print-ui__radio{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+    .print-ui__radio .dot{
+      width: 14px; height: 14px;
+      border-radius: 999px;
+      border: 2px solid #94a3b8;
+      display:inline-block;
+      position: relative;
+      flex: 0 0 auto;
+    }
+    .print-ui__radio.selected .dot{
+      border-color: #64748b;
+    }
+    .print-ui__radio.selected .dot::after{
+      content:"";
+      position:absolute;
+      inset: 3px;
+      border-radius: 999px;
+      background: #64748b;
+    }
+    .print-ui__input{
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 10px 10px;
+      color: #64748b;
+      font-weight: 750;
+    }
+    .print-ui__hint{
+      font-size: 0.82rem;
+      color: #64748b;
+      font-weight: 750;
+      margin-top: -2px;
+    }
+    .print-ui__check{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+    .print-ui__check .box{
+      width: 16px; height: 16px;
+      border-radius: 4px;
+      border: 2px solid #94a3b8;
+      background: #fff;
+      flex: 0 0 auto;
+      position: relative;
+    }
+    .print-ui__check.selected .box{
+      border-color: #64748b;
+      background: #e2e8f0;
+    }
+    .print-ui__check.selected .box::after{
+      content:"✓";
+      position:absolute;
+      inset: -1px 0 0 0;
+      font-size: 0.92rem;
+      color: #0f172a;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight: 950;
+    }
+
+  </style>
+</head>
+
+<body>
+  <div class="page">
+    <div class="top-header screen-only" aria-label="Encabezado">
+      <div class="brand">
+        <img src="https://www.sena.edu.co/Style%20Library/alayout/images/logoSena.png" alt="Logo SENA">
+        <div class="brand-lines">
+          <div class="l1">Servicio Nacional de Aprendizaje</div>
+          <div class="l2">SENA Regional Tolima</div>
+          <div class="l3">Centro de Comercio y Servicios</div>
+        </div>
+      </div>
+
+      <div class="header-center">
+        <div class="title">Calendario de Cumpleaños <span id="headerYear"></span></div>
+        <div class="report-badges" id="headerReport"></div>
+        <div class="subtitle">Formato: d/m/yyyy o dd/mm/yyyy [espacio|-,;] Nombre</div>
+      </div>
+    </div>
+
+    <section class="controls screen-only" aria-label="Controles">
+      <h2>Datos de entrada</h2>
+      <p>Escriba una línea por persona: <strong>fecha</strong> + <strong>separador</strong> + <strong>nombre</strong>.</p>
+
+      <div class="grid-controls">
+        <div>
+          <label for="inputData">Listado</label>
+          <textarea id="inputData" spellcheck="false" placeholder="Ejemplos:
+5/01/2026 - MARÍA PÉREZ
+05/01/2026, maria perez
+5/1/2026; JUAN de la cruz
+05/01/2026 Yeison Castellanos"></textarea>
+
+          <div class="row">
+            <button id="btnApply" type="button">Actualizar calendario</button>
+            <button id="btnSave" type="button" class="secondary">Guardar en el navegador</button>
+            <button id="btnClear" type="button" class="secondary">Limpiar</button>
+          </div>
+
+          <div class="hint">
+            Separadores: <strong>espacio</strong>, <strong>-</strong>, <strong>,</strong>, <strong>;</strong>. Fecha: <strong>d/m/yyyy</strong> o <strong>dd/mm/yyyy</strong>.
+            Los nombres se normalizan a <strong>Nompropio</strong>.
+          </div>
+
+          <div id="errors" class="errors" role="alert" aria-live="polite"></div>
+        </div>
+
+        <div>
+          <label for="yearRef">Año de referencia para la edad</label><br/>
+          <input id="yearRef" type="number" min="2000" max="2100" />
+          <div class="row" style="margin-top: 12px;">
+            <button id="btnPrint" type="button">Exportar a PDF</button>
+            <button id="btnPreview" type="button" class="secondary">Vista previa PDF</button>
+          </div>
+          <div class="hint" id="printHint">PDF: Landscape automático y páginas según total de registros.</div>
+</div>
+      </div>
+    </section>
+
+    <div id="printArea">
+      <!-- Screen calendar -->
+      <section class="calendar screen-only" aria-label="Calendario en pantalla">
+        <div class="calendar-top">
+          <h2>Meses</h2>
+          <div class="note">Última actualización: <span id="lastUpdate">-</span></div>
+        </div>
+        <div id="monthsGrid" class="months-grid" aria-label="Cuadrícula de meses"></div>
+      </section>
+
+      <!-- Preview PDF on screen -->
+      <section class="preview-wrap screen-only" id="previewWrap" aria-label="Vista previa PDF">
+        <div class="preview-toolbar">
+          <div class="label">Vista previa PDF (Letter horizontal)</div>
+          <div class="meta" id="previewMeta">—</div>
+        </div>
+        <div class="preview-viewport" id="previewViewport">
+          <div id="previewSheets"></div>
+        </div>
+      </section>
+
+      <!-- Print calendar (visible only in print) -->
+      <section class="print-only" aria-label="Calendario para impresión">
+        <div id="printPages" class="print-pages"></div>
+      </section>
+    </div>
+
+    <footer class="sena-footer screen-only" aria-label="Pie de página">
+      <div class="caption">DISEÑO Y DESARROLLO</div>
+      <div class="pill">
+        <div class="left-icon" aria-hidden="true">✕</div>
+        <div class="text">
+          <div class="role">INSTRUCTOR DISEÑADOR</div>
+          <div class="name">Yeison Castellanos Gordillo</div>
+        </div>
+        <div class="right-icon" aria-hidden="true">⚙</div>
+      </div>
+    </footer>
+  </div>
+
+
+    <!-- Modal: Recomendaciones de impresión -->
+    <div id="printModal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Recomendaciones de impresión">
+      <div class="modal__backdrop"></div>
+      <div class="modal__panel">
+        <div class="modal__head">
+          <div class="modal__title">Recomendaciones para “Guardar como PDF”</div>
+          <button type="button" class="modal__close" id="btnClosePrintModal" aria-label="Cerrar">✕</button>
+        </div>
+
+        <div class="modal__body">
+          <div class="print-ui">
+            <div class="print-ui__section">
+              <div class="print-ui__label">Impresora</div>
+              <div class="print-ui__box">
+                <div class="print-ui__select">Guardar como PDF</div>
+              </div>
+            </div>
+
+            <div class="print-ui__section">
+              <div class="print-ui__label">Diseño</div>
+              <div class="print-ui__box">
+                <div class="print-ui__radio">
+                  <span class="dot"></span><span>Vertical</span>
+                </div>
+                <div class="print-ui__radio selected">
+                  <span class="dot"></span><span>Horizontal</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="print-ui__section">
+              <div class="print-ui__label">Páginas</div>
+              <div class="print-ui__box">
+                <div class="print-ui__radio selected">
+                  <span class="dot"></span><span>Todo</span>
+                </div>
+                <div class="print-ui__radio">
+                  <span class="dot"></span><span>Solo páginas impares</span>
+                </div>
+                <div class="print-ui__radio">
+                  <span class="dot"></span><span>Solo páginas pares</span>
+                </div>
+                <div class="print-ui__input">Por ejemplo: 1-5, 8, 11-13</div>
+              </div>
+            </div>
+
+            <div class="print-ui__section">
+              <div class="print-ui__label">Tamaño de papel</div>
+              <div class="print-ui__box">
+                <div class="print-ui__select">Letter</div>
+              </div>
+            </div>
+
+            <div class="print-ui__section">
+              <div class="print-ui__label">Escala (%)</div>
+              <div class="print-ui__box">
+                <div class="print-ui__select">100</div>
+                <div class="print-ui__hint">Si se recorta, pruebe 95.</div>
+              </div>
+            </div>
+
+            <div class="print-ui__section">
+              <div class="print-ui__label">Páginas por hoja</div>
+              <div class="print-ui__box">
+                <div class="print-ui__select">1</div>
+              </div>
+            </div>
+
+            <div class="print-ui__section" style="grid-column: 1 / -1;">
+              <div class="print-ui__label">Más opciones</div>
+              <div class="print-ui__box">
+                <div class="print-ui__check selected"><span class="box"></span><span>Gráficos de fondo: Activado</span></div>
+                <div class="print-ui__check"><span class="box"></span><span>Encabezados y pies: Desactivado</span></div>
+                <div class="print-ui__check selected"><span class="box"></span><span>Márgenes: Predeterminados</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal__note">
+            Nota: el navegador no permite aplicar estas opciones automáticamente; deben seleccionarse en el cuadro de impresión.
+          </div>
+
+          <label class="modal__dontshow">
+            <input type="checkbox" id="chkDontShowPrintTips" />
+            No volver a mostrar estas recomendaciones
+          </label>
+        </div>
+
+        <div class="modal__actions">
+          <button type="button" class="secondary" id="btnCancelPrintModal">Cancelar</button>
+          <button type="button" id="btnConfirmPrintModal">Abrir impresión</button>
+        </div>
+      </div>
+    </div>
+
+  <script>
+    (function(){
+      const STORAGE_KEY = "sena_birthday_calendar_v22";
+
+      const MONTHS = [
+        "Enero","Febrero","Marzo","Abril","Mayo","Junio",
+        "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"
+      ];
+
+      const MONTH_ICONS = [
+        "🎉","📚","🌱","🌸","🌷","☀️","🎒","🪁","💕","🎃","🍂","🎅"
+      ];
+
+      const LOWER_WORDS = new Set([
+        "de","del","la","las","el","los","y","e","da","das","do","dos","van","von","san","santa"
+      ]);
+
+      const elInput = document.getElementById("inputData");
+      const elErrors = document.getElementById("errors");
+      const elMonthsGrid = document.getElementById("monthsGrid");
+      const elPrintPages = document.getElementById("printPages");
+      const elLastUpdate = document.getElementById("lastUpdate");
+      const elHeaderYear = document.getElementById("headerYear");
+      const elYearRef = document.getElementById("yearRef");
+      const elPrintHint = document.getElementById("printHint");
+
+      const elHeaderReport = document.getElementById("headerReport");
+const btnApply = document.getElementById("btnApply");
+      const btnSave = document.getElementById("btnSave");
+      const btnClear = document.getElementById("btnClear");
+      const btnPrint = document.getElementById("btnPrint");
+      const btnPreview = document.getElementById("btnPreview");
+
+      const printModal = document.getElementById("printModal");
+      const btnClosePrintModal = document.getElementById("btnClosePrintModal");
+      const btnCancelPrintModal = document.getElementById("btnCancelPrintModal");
+      const btnConfirmPrintModal = document.getElementById("btnConfirmPrintModal");
+      const chkDontShowPrintTips = document.getElementById("chkDontShowPrintTips");
+
+
+      const previewWrap = document.getElementById("previewWrap");
+      const previewViewport = document.getElementById("previewViewport");
+      const previewSheets = document.getElementById("previewSheets");
+      const previewMeta = document.getElementById("previewMeta");
+
+      function nowStr(){
+        const d = new Date();
+        const pad = (n)=> String(n).padStart(2,"0");
+        return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      }
+
+      function getRefYear(){
+        const y = parseInt((elYearRef.value || "").toString().trim(), 10);
+        return Number.isFinite(y) ? y : new Date().getFullYear();
+      }
+
+      function setHeader(){
+        const year = (elYearRef.value || "").toString().trim() || String(new Date().getFullYear());
+        elHeaderYear.textContent = year ? (" " + year) : "";
+      }
+
+      function sanitizeText(s){
+        return (s ?? "").toString().trim().replace(/\s+/g, " ");
+      }
+
+      function titleCaseWord(w){
+        if(!w) return w;
+        return w.split("-").map(part=>{
+          if(!part) return part;
+          return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+        }).join("-");
+      }
+
+      function toProperName(name){
+        const cleaned = sanitizeText(name);
+        if(!cleaned) return cleaned;
+        const words = cleaned.toLowerCase().split(" ");
+        return words.map((w, idx) => {
+          if(!w) return w;
+          if(idx !== 0 && LOWER_WORDS.has(w)) return w;
+          return titleCaseWord(w);
+        }).join(" ");
+      }
+
+      // Fecha d/m/yyyy o dd/mm/yyyy, separadores: espacio, -, , ;
+      function parseLine(line){
+        const raw = (line || "").trim();
+        if(!raw) return null;
+
+        const rx = /^(\d{1,2}\/\d{1,2}\/\d{4})[\s\-—–,;]+(.+)$/;
+        const m = raw.match(rx);
+        if(!m) return { error: "Formato inválido. Use: d/m/yyyy [espacio|-,;] Nombre" };
+
+        const dateStr = m[1].trim();
+        const nameStr = toProperName(m[2]);
+
+        const dm = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if(!dm) return { error: "Fecha inválida. Use d/m/yyyy" };
+
+        const dd = Number(dm[1]);
+        const mm = Number(dm[2]);
+        const yyyy = Number(dm[3]);
+
+        if(!(mm >= 1 && mm <= 12)) return { error: "Mes fuera de rango (1–12)" };
+        if(!(dd >= 1 && dd <= 31)) return { error: "Día fuera de rango (1–31)" };
+        if(!nameStr) return { error: "Falta el nombre" };
+
+        const test = new Date(yyyy, mm-1, dd);
+        if(test.getFullYear() !== yyyy || test.getMonth() !== (mm-1) || test.getDate() !== dd){
+          return { error: "Fecha no válida (revise día/mes)" };
+        }
+
+        return { day: dd, month: mm, year: yyyy, name: nameStr };
+      }
+
+      function buildEmptyMonths(){
+        return Array.from({length:12}, ()=>[]);
+      }
+
+      // Edad: por año de referencia (si year == refYear, no se muestra)
+      function ageNumber(birthYear){
+        const refYear = getRefYear();
+        if(birthYear === refYear) return null;
+        const age = refYear - birthYear;
+        if(!Number.isFinite(age) || age < 0) return null;
+        return age;
+      }
+
+      function ageTextFromNumber(age){
+        return `Cumple ${age} año${age === 1 ? "" : "s"}`;
+      }
+
+      function sortEntries(entries){
+        return entries.slice().sort((a,b)=>{
+          if(a.day !== b.day) return a.day - b.day;
+          return a.name.localeCompare(b.name, "es", { sensitivity:"base" });
+        });
+      }
+
+      // Densidad por mes
+      function monthDensityClass(n){
+        if(n > 34) return "dense-35";
+        if(n > 24) return "dense-25";
+        if(n > 15) return "dense-15";
+        return "";
+      }
+
+      // Estimar cuántas filas visuales se usarán según columnas internas
+      function monthVisualLines(n){
+        const cols = (n > 10) ? 3 : (n > 5 ? 2 : 1);
+        return Math.ceil(n / cols);
+      }
+
+      // Span vertical para PDF (sin dividir meses):
+      // - regla explícita del usuario: >24 => mínimo 2; >40 => mínimo 3
+      // - adicional: si por líneas visuales se ve "alto", también puede subir.
+      function monthSpan(n){
+        let span = 1;
+        if(n > 40) span = 3;
+        else if(n > 24) span = 2;
+
+        const lines = monthVisualLines(n);
+        if(lines >= 14) span = Math.max(span, 2);
+        if(lines >= 24) span = Math.max(span, 3);
+        return span;
+      }
+
+      function countPillText(n){
+        if(n > 24) return `🔥 ${n}`;
+        if(n > 15) return `⚠ ${n}`;
+        return String(n);
+      }
+
+      function createMonthCard(monthIndex, entries, forPrint){
+        const card = document.createElement("div");
+        card.className = "month-card";
+
+        const dens = monthDensityClass(entries.length);
+        if(dens) card.classList.add(dens);
+
+        // PDF/preview: meses cargados ganan altura
+        const span = monthSpan(entries.length);
+        if(span === 2) card.classList.add("tall-2");
+        if(span === 3) card.classList.add("tall-3");
+
+        const head = document.createElement("div");
+        head.className = "month-card__head";
+
+        const title = document.createElement("div");
+        title.className = "month-title";
+
+        const icon = document.createElement("span");
+        icon.className = "icon";
+        icon.textContent = MONTH_ICONS[monthIndex] || "📅";
+
+        const name = document.createElement("span");
+        name.textContent = MONTHS[monthIndex];
+
+        title.appendChild(icon);
+        title.appendChild(name);
+
+        const count = document.createElement("div");
+        count.className = "count";
+        count.textContent = countPillText(entries.length);
+
+        head.appendChild(title);
+        head.appendChild(count);
+
+        const body = document.createElement("div");
+        body.className = "month-card__body";
+
+        if(entries.length > 10) body.classList.add("cols-3");
+        else if(entries.length > 5) body.classList.add("cols-2");
+
+        for(const e of entries){
+          const row = document.createElement("div");
+          row.className = "entry";
+
+          const badge = document.createElement("div");
+          badge.className = "badge";
+          badge.textContent = String(e.day).padStart(2,"0");
+
+          const text = document.createElement("div");
+
+          const who = document.createElement("div");
+          who.className = "who";
+
+          const ageNum = ageNumber(e.year);
+          if(ageNum !== null){
+            const agePill = document.createElement("span");
+            agePill.className = "age-num";
+            agePill.textContent = String(ageNum); // PDF: solo número
+            who.appendChild(agePill);
+          }
+
+          const nameSpan = document.createElement("span");
+          nameSpan.className = "name-text";
+          nameSpan.textContent = e.name;
+          who.appendChild(nameSpan);
+
+          text.appendChild(who);
+
+          // Meta solo pantalla (en PDF se oculta por CSS)
+          if(!forPrint && ageNum !== null){
+            const meta = document.createElement("div");
+            meta.className = "meta";
+            meta.textContent = ageTextFromNumber(ageNum);
+            text.appendChild(meta);
+          }
+
+          row.appendChild(badge);
+          row.appendChild(text);
+          body.appendChild(row);
+        }
+
+        card.appendChild(head);
+        card.appendChild(body);
+        return card;
+      }
+
+      function renderScreen(byMonth){
+        elMonthsGrid.innerHTML = "";
+        let rendered = 0;
+
+        for(let i=0;i<12;i++){
+          const entries = sortEntries(byMonth[i] || []);
+          if(entries.length === 0) continue;
+          rendered++;
+          elMonthsGrid.appendChild(createMonthCard(i, entries, false));
+        }
+
+        if(rendered === 0){
+          const msg = document.createElement("div");
+          msg.className = "no-data";
+          msg.textContent = "No hay registros para mostrar.";
+          elMonthsGrid.appendChild(msg);
+        }
+      }
+
+      // Dimensiones base por cantidad de meses en una página (pantalla/print/preview)
+      function dimsFor(n){
+        if(n >= 10) return { cols: 4, rows: 3 };
+        if(n === 9) return { cols: 3, rows: 3 };
+        if(n === 8) return { cols: 4, rows: 2 };
+        if(n === 7) return { cols: 4, rows: 2 };
+        if(n === 6) return { cols: 3, rows: 2 };
+        if(n === 5) return { cols: 3, rows: 2 };
+        if(n === 4) return { cols: 2, rows: 2 };
+        if(n === 3) return { cols: 3, rows: 1 };
+        if(n === 2) return { cols: 2, rows: 1 };
+        if(n === 1) return { cols: 1, rows: 1 };
+        return { cols: 4, rows: 3 };
+      }
+
+      function pagesCount(total){
+        if(total <= 40) return 1;
+        if(total <= 70) return 2;
+        if(total <= 100) return 3;
+        return 4; // 101–130 (y más, si llega)
+      }
+
+      function setPrintDensityClass(total){
+        const html = document.documentElement;
+        html.classList.remove("pd-2","pd-3","pd-4");
+        const pages = pagesCount(total);
+        if(pages === 2) html.classList.add("pd-2");
+        else if(pages === 3) html.classList.add("pd-3");
+        else if(pages >= 4) html.classList.add("pd-4");
+      }
+
+      function pageLabel(total){
+        if(total <= 40) return "1 hoja";
+        if(total <= 70) return "2 hojas";
+        if(total <= 100) return "3 hojas";
+        return "4 hojas";
+      }
+
+      // Distribución: se reparten los meses CON DATOS, en orden, entre N páginas, buscando balance por "span" (altura)
+      function splitMonthsIntoPages(monthCards, pages){
+        if(pages <= 1) return [monthCards];
+
+        const spans = monthCards.map(m => monthSpan(m.entries.length));
+        const totalSpan = spans.reduce((a,b)=>a+b,0);
+        const target = totalSpan / pages;
+
+        const groups = [];
+        let cur = [];
+        let curSpan = 0;
+        let remainingPages = pages;
+
+        for(let i=0;i<monthCards.length;i++){
+          const m = monthCards[i];
+          const s = monthSpan(m.entries.length);
+
+          const remainingMonths = monthCards.length - i;
+          const mustLeave = remainingPages - 1; // al menos 1 mes por página restante
+
+          // Si ya tengo algo en la página actual y:
+          // - agregar el siguiente mes supera el objetivo
+          // - y aún quedan páginas
+          // - y quedan suficientes meses para repartir
+          if(cur.length > 0 && remainingPages > 1 && (curSpan + s) > target && (remainingMonths > mustLeave)){
+            groups.push(cur);
+            remainingPages--;
+            cur = [m];
+            curSpan = s;
+            continue;
+          }
+
+          cur.push(m);
+          curSpan += s;
+        }
+        if(cur.length) groups.push(cur);
+
+        // Si por alguna razón quedaron más grupos que páginas, fusionar al final
+        while(groups.length > pages){
+          const last = groups.pop();
+          groups[groups.length-1] = groups[groups.length-1].concat(last);
+        }
+        return groups;
+      }
+
+      function buildReportBadges(stats, whereEl){
+        whereEl.innerHTML = "";
+        const mk = (k,v) => {
+          const b = document.createElement("div");
+          b.className = "stat-badge";
+          b.innerHTML = `<span class="k">${k}:</span> <span class="v">${v}</span>`;
+          return b;
+        };
+
+        whereEl.appendChild(mk("Total", stats.total.toString()));
+        whereEl.appendChild(mk("Mes pico", stats.peakMonthText));
+        whereEl.appendChild(mk("Prom. edad", stats.avgAgeText));
+        whereEl.appendChild(mk("Edad mín", stats.minAgeText));
+        whereEl.appendChild(mk("Edad máx", stats.maxAgeText));
+        whereEl.appendChild(mk("Menor", stats.youngestNameText));
+      }
+
+      function computeStats(allEntries, byMonth){
+        const total = allEntries.length;
+
+        // Peak month (only months with data)
+        let peakMonthIdx = null;
+        let peakMonthCount = 0;
+        for(let i=0;i<12;i++){
+          const c = (byMonth[i] || []).length;
+          if(c > peakMonthCount){
+            peakMonthCount = c;
+            peakMonthIdx = i;
+          }
+        }
+        const peakMonthText = (peakMonthIdx === null || peakMonthCount === 0)
+          ? "N/D"
+          : `${MONTHS[peakMonthIdx]} (${peakMonthCount})`;
+
+        // ages available only when year != refYear
+        const ages = [];
+        for(const e of allEntries){
+          const a = ageNumber(e.year);
+          if(a !== null) ages.push({ age: a, name: e.name });
+        }
+
+        let avgAgeText = "N/D";
+        let youngestNameText = "N/D";
+        let minAgeText = "N/D";
+        let maxAgeText = "N/D";
+
+        if(ages.length > 0){
+          const avg = ages.reduce((acc,x)=>acc+x.age,0) / ages.length;
+          avgAgeText = avg.toFixed(avg % 1 === 0 ? 0 : 1);
+
+          let youngest = ages[0];
+          let minAge = ages[0].age;
+          let maxAge = ages[0].age;
+
+          for(const x of ages){
+            if(x.age < minAge) minAge = x.age;
+            if(x.age > maxAge) maxAge = x.age;
+
+            if(x.age < youngest.age) youngest = x;
+            else if(x.age === youngest.age && x.name.localeCompare(youngest.name, "es", { sensitivity:"base" }) < 0) youngest = x;
+          }
+
+          youngestNameText = youngest.name;
+          minAgeText = String(minAge);
+          maxAgeText = String(maxAge);
+        }
+
+        return { total, peakMonthText, avgAgeText, minAgeText, maxAgeText, youngestNameText };
+      }
+
+      function buildPageHeaderPrint(stats){
+        const header = document.createElement("div");
+        header.className = "page-header-print";
+
+        const brand = document.createElement("div");
+        brand.className = "brand";
+
+        const img = document.createElement("img");
+        img.src = "https://www.sena.edu.co/Style%20Library/alayout/images/logoSena.png";
+        img.alt = "Logo SENA";
+
+        const lines = document.createElement("div");
+        lines.className = "brand-lines";
+        lines.innerHTML = `
+          <div class="l1">Servicio Nacional de Aprendizaje</div>
+          <div class="l2">SENA Regional Tolima</div>
+          <div class="l3">Centro de Comercio y Servicios</div>
+        `;
+
+        brand.appendChild(img);
+        brand.appendChild(lines);
+
+        const right = document.createElement("div");
+        right.className = "header-center";
+
+        const title = document.createElement("div");
+        title.className = "title";
+        const year = (elYearRef.value || "").toString().trim() || String(new Date().getFullYear());
+        title.textContent = `Calendario de Cumpleaños ${year}`;
+
+        const rep = document.createElement("div");
+        rep.className = "report-badges";
+        // compact pills in print
+        rep.innerHTML = `
+          <div class="stat-badge"><span class="k">Total</span><span class="v">${stats.total}</span></div>
+          <div class="stat-badge"><span class="k">Pico</span><span class="v">${stats.peakMonthText}</span></div>
+          <div class="stat-badge"><span class="k">Prom</span><span class="v">${stats.avgAgeText}</span></div>
+          <div class="stat-badge"><span class="k">Mín</span><span class="v">${stats.minAgeText}</span></div>
+          <div class="stat-badge"><span class="k">Máx</span><span class="v">${stats.maxAgeText}</span></div>
+          <div class="stat-badge long"><span class="k">Menor</span><span class="v">${stats.youngestNameText}</span></div>
+        `;
+
+        right.appendChild(title);
+        right.appendChild(rep);
+
+        header.appendChild(brand);
+        header.appendChild(right);
+        return header;
+      }
+
+      function renderPrintAndPreview(byMonth, total, stats){
+        elPrintPages.innerHTML = "";
+        previewSheets.innerHTML = "";
+
+        setPrintDensityClass(total);
+
+        // Lista de meses con datos (orden cronológico)
+        const monthCards = [];
+        for(let i=0;i<12;i++){
+          const entries = sortEntries(byMonth[i] || []);
+          if(entries.length === 0) continue;
+          monthCards.push({ idx: i, entries });
+        }
+
+        const pages = pagesCount(total);
+        const groups = splitMonthsIntoPages(monthCards, pages);
+
+        let pagesCreated = 0;
+
+        for(const group of groups){
+          if(group.length === 0) continue;
+
+          const page = document.createElement("div");
+          page.className = "print-page";
+
+          const header = buildPageHeaderPrint(stats);
+
+          const grid = document.createElement("div");
+          grid.className = "print-grid";
+
+          const base = dimsFor(group.length);
+          const extraCells = group.reduce((acc, mc) => (acc + (monthSpan(mc.entries.length) - 1)), 0);
+          const requiredCells = group.length + extraCells;
+
+          // Filas necesarias según consumo por spans
+          const rows = Math.max(base.rows, Math.ceil(requiredCells / base.cols));
+
+          grid.style.setProperty("--cols", base.cols);
+          grid.style.setProperty("--rows", rows);
+
+          for(const mc of group){
+            grid.appendChild(createMonthCard(mc.idx, mc.entries, true));
+          }
+
+          page.appendChild(header);
+          page.appendChild(grid);
+
+          // Print DOM
+          elPrintPages.appendChild(page);
+
+          // Preview sheets (screen)
+          const sheet = document.createElement("div");
+          sheet.className = "sheet";
+          const inner = document.createElement("div");
+          inner.className = "sheet-inner";
+          inner.appendChild(page.cloneNode(true));
+          sheet.appendChild(inner);
+          previewSheets.appendChild(sheet);
+
+          pagesCreated++;
+        }
+
+        elPrintHint.textContent = `PDF: Total ${total} registros → ${pageLabel(total)} (Letter horizontal).`;
+        previewMeta.textContent = `Total ${total} registros • ${pageLabel(total)} • Letter horizontal`;
+      }
+
+      function fitPreview(){
+        // Escala para que la hoja (297mm) quepa en el viewport disponible
+        const sheets = previewSheets.querySelectorAll(".sheet");
+        if(sheets.length === 0) return;
+
+        const vw = previewViewport.clientWidth - 24; // padding approx
+        // 297mm in px depends on device, so measure using getBoundingClientRect on an unscaled sheet
+        const s0 = sheets[0];
+        const rect = s0.getBoundingClientRect();
+        const naturalW = rect.width || 1;
+        const scale = Math.min(1, vw / naturalW);
+
+        sheets.forEach(s => {
+          s.style.transform = `scale(${scale})`;
+          s.style.marginBottom = `${14 * scale}px`;
+        });
+      }
+
+      function apply(){
+        setHeader();
+
+        const lines = (elInput.value || "")
+          .split(/\r?\n/)
+          .map(s => s.trim())
+          .filter(s => s.length > 0);
+
+        const byMonth = buildEmptyMonths();
+        const errors = [];
+        const allValidEntries = [];
+
+        lines.forEach((ln, idx) => {
+          const parsed = parseLine(ln);
+          if(!parsed) return;
+          if(parsed.error){
+            errors.push(`Línea ${idx+1}: ${parsed.error}`);
+            return;
+          }
+          byMonth[parsed.month - 1].push(parsed);
+          allValidEntries.push(parsed);
+        });
+
+        if(errors.length){
+          elErrors.style.display = "block";
+          elErrors.innerHTML = `<div>Se encontraron ${errors.length} error(es):</div><ul>${errors.map(e=>`<li>${e}</li>`).join("")}</ul>`;
+        } else {
+          elErrors.style.display = "none";
+          elErrors.innerHTML = "";
+        }
+
+        const stats = computeStats(allValidEntries, byMonth);
+        buildReportBadges(stats, elHeaderReport);
+        
+        renderScreen(byMonth);
+        renderPrintAndPreview(byMonth, stats.total, stats);
+
+        elLastUpdate.textContent = nowStr();
+
+        // si está en preview-mode, ajustar escala
+        if(document.documentElement.classList.contains("preview-mode")){
+          requestAnimationFrame(fitPreview);
+        }
+      }
+
+      function save(){
+        const payload = { yearRef: (elYearRef.value || "").toString().trim(), data: elInput.value || "" };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      }
+
+      function load(){
+        elYearRef.value = String(new Date().getFullYear());
+
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if(saved){
+          try{
+            const obj = JSON.parse(saved);
+            if(obj && typeof obj === "object"){
+              if(obj.yearRef) elYearRef.value = obj.yearRef;
+              if(obj.data) elInput.value = obj.data;
+            }
+          }catch(_){}
+        }
+
+        setHeader();
+        apply();
+      }
+
+      function clearAll(){
+        elInput.value = "";
+        elErrors.style.display = "none";
+        elErrors.innerHTML = "";
+        localStorage.removeItem(STORAGE_KEY);
+        apply();
+      }
+
+      function beforePrint(){ apply(); }
+
+      const PRINT_TIPS_KEY = "sena_print_tips_hide_v1";
+
+      function openPrintModal(){
+        const hide = localStorage.getItem(PRINT_TIPS_KEY) === "1";
+        if(hide){
+          beforePrint();
+          requestAnimationFrame(() => window.print());
+          return;
+        }
+        if(!printModal) {
+          beforePrint();
+          requestAnimationFrame(() => window.print());
+          return;
+        }
+        printModal.setAttribute("aria-hidden","false");
+        document.body.style.overflow = "hidden";
+        if(chkDontShowPrintTips) chkDontShowPrintTips.checked = false;
+      }
+
+      function closePrintModal(){
+        if(!printModal) return;
+        printModal.setAttribute("aria-hidden","true");
+        document.body.style.overflow = "";
+      }
+
+      function confirmPrintModal(){
+        if(chkDontShowPrintTips && chkDontShowPrintTips.checked){
+          localStorage.setItem(PRINT_TIPS_KEY, "1");
+        }
+        closePrintModal();
+        beforePrint();
+        requestAnimationFrame(() => window.print());
+      }
+
+      // Modal events
+      if(printModal){
+        printModal.addEventListener("click", (e) => {
+          if(e.target && e.target.classList.contains("modal__backdrop")) closePrintModal();
+        });
+      }
+      if(btnClosePrintModal) btnClosePrintModal.addEventListener("click", closePrintModal);
+      if(btnCancelPrintModal) btnCancelPrintModal.addEventListener("click", closePrintModal);
+      if(btnConfirmPrintModal) btnConfirmPrintModal.addEventListener("click", confirmPrintModal);
+      document.addEventListener("keydown", (e) => {
+        if(e.key === "Escape" && printModal && printModal.getAttribute("aria-hidden") === "false") closePrintModal();
+      });
+
+      function togglePreview(){
+        const html = document.documentElement;
+        const isOn = html.classList.toggle("preview-mode");
+        btnPreview.textContent = isOn ? "Cerrar vista previa" : "Vista previa PDF";
+        if(isOn){
+          previewWrap.scrollIntoView({ behavior: "smooth", block: "start" });
+          requestAnimationFrame(() => { fitPreview(); });
+        }
+      }
+
+      btnApply.addEventListener("click", apply);
+      btnSave.addEventListener("click", () => { save(); apply(); });
+      btnClear.addEventListener("click", clearAll);
+
+      elYearRef.addEventListener("input", () => { setHeader(); apply(); });
+
+      btnPrint.addEventListener("click", () => {
+        openPrintModal();
+      });
+
+btnPreview.addEventListener("click", togglePreview);
+
+      window.addEventListener("beforeprint", beforePrint);
+      window.addEventListener("resize", () => {
+        if(document.documentElement.classList.contains("preview-mode")){
+          fitPreview();
+        }
+      });
+
+      load();
+    })();
+  </script>
+</body>
+</html>
