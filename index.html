@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Calendario de Cumpleaños – SENA</title>
+  <title>Calendario de Eventos – SENA</title>
 
   <style>
     :root{
@@ -585,14 +585,6 @@
       text-overflow: ellipsis;
     }
 
-      .page-header-print .stat-badge.long{
-        flex: 1 1 auto;
-      }
-      .page-header-print .stat-badge.long .v{
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
 
     html.preview-mode .print-grid{
       flex: 1 1 auto;
@@ -628,6 +620,7 @@
     html.preview-mode .print-grid .name-text{
       display:-webkit-box;
       -webkit-line-clamp: 1;
+      line-clamp: 1;
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
@@ -661,16 +654,17 @@
 
       .print-pages{ margin: 0; }
 
+      /* Evita hoja en blanco al final en exportación a PDF */
       .print-page{
         height: calc(215.9mm - (var(--pm) * 2));
         display:flex;
         flex-direction:column;
-        break-after: page;
-        page-break-after: always;
-      }
-      .print-page:last-child{
         break-after: auto;
         page-break-after: auto;
+      }
+      .print-page:not(:last-child){
+        break-after: page;
+        page-break-after: always;
       }
 
       .page-header-print{
@@ -775,6 +769,7 @@
         line-height: 1.1;
         display:-webkit-box;
         -webkit-line-clamp: 1;
+      line-clamp: 1;
         -webkit-box-orient: vertical;
         overflow: hidden;
       }
@@ -1029,7 +1024,7 @@
   <div class="page">
     <div class="top-header screen-only" aria-label="Encabezado">
       <div class="brand">
-        <img src="https://www.sena.edu.co/Style%20Library/alayout/images/logoSena.png" alt="Logo SENA">
+        <img src="https://www.sena.edu.co/Style%20Library/alayout/images/logoSena.png" alt="Logo SENA" class="sena-logo" referrerpolicy="no-referrer">
         <div class="brand-lines">
           <div class="l1">Servicio Nacional de Aprendizaje</div>
           <div class="l2">SENA Regional Tolima</div>
@@ -1038,7 +1033,7 @@
       </div>
 
       <div class="header-center">
-        <div class="title">Calendario de Cumpleaños <span id="headerYear"></span></div>
+        <div class="title">Calendario de Eventos <span id="headerYear"></span></div>
         <div class="report-badges" id="headerReport"></div>
         <div class="subtitle">Formato: d/m/yyyy o dd/mm/yyyy [espacio|-,;] Nombre</div>
       </div>
@@ -1061,7 +1056,9 @@
             <button id="btnApply" type="button">Actualizar calendario</button>
             <button id="btnSave" type="button" class="secondary">Guardar en el navegador</button>
             <button id="btnClear" type="button" class="secondary">Limpiar</button>
-          </div>
+                      <button id="btnDownloadHtml" type="button" class="secondary"></button>
+            <button id="btnDownloadTxt" type="button" class="secondary"></button>
+</div>
 
           <div class="hint">
             Separadores: <strong>espacio</strong>, <strong>-</strong>, <strong>,</strong>, <strong>;</strong>. Fecha: <strong>d/m/yyyy</strong> o <strong>dd/mm/yyyy</strong>.
@@ -1252,6 +1249,9 @@ const btnApply = document.getElementById("btnApply");
       const btnPrint = document.getElementById("btnPrint");
       const btnPreview = document.getElementById("btnPreview");
 
+      const btnDownloadHtml = document.getElementById("btnDownloadHtml");
+      const btnDownloadTxt = document.getElementById("btnDownloadTxt");
+
       const printModal = document.getElementById("printModal");
       const btnClosePrintModal = document.getElementById("btnClosePrintModal");
       const btnCancelPrintModal = document.getElementById("btnCancelPrintModal");
@@ -1268,6 +1268,69 @@ const btnApply = document.getElementById("btnApply");
         const d = new Date();
         const pad = (n)=> String(n).padStart(2,"0");
         return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      }
+
+
+      // Descargas (sin dependencias)
+      function downloadBlob(content, filename, mime){
+        const blob = new Blob([content], { type: mime || "application/octet-stream" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+      }
+
+      // Exporta este mismo archivo (snapshot) incluyendo el listado actual y el año de referencia.
+      // Al abrir el HTML exportado, se re-renderiza automáticamente (load()+apply()).
+      function exportCurrentHTML(){
+        const doc = document.documentElement.cloneNode(true);
+
+        // Evitar exportar el modo de vista previa
+        doc.classList.remove("preview-mode");
+
+        const t = doc.querySelector("#inputData");
+        if(t) t.value = (elInput.value || "");
+
+        const y = doc.querySelector("#yearRef");
+        if(y) y.value = (elYearRef.value || "");
+
+        const year = (elYearRef.value || new Date().getFullYear()).toString().trim() || String(new Date().getFullYear());
+        const title = `Calendario_Eventos_SENA_${year}.html`;
+        const html = "<!doctype html>\n" + doc.outerHTML;
+        downloadBlob(html, title, "text/html;charset=utf-8");
+      }
+
+      function exportTxt(){
+        const year = (elYearRef.value || new Date().getFullYear()).toString().trim();
+        const content = (elInput.value || "").trim();
+        const filename = `Listado_Eventos_${year || "SENA"}.txt`;
+        downloadBlob(content + (content ? "\n" : ""), filename, "text/plain;charset=utf-8");
+      }
+
+      // Logo: fallback simple si el recurso externo falla (modo offline)
+      function ensureLogoFallback(img){
+        if(!img) return;
+        img.addEventListener("error", () => {
+          const svg = document.createElement("span");
+          svg.setAttribute("aria-label","SENA");
+          svg.style.display = "inline-flex";
+          svg.style.alignItems = "center";
+          svg.style.justifyContent = "center";
+          svg.style.width = (img.getAttribute("width") ? (img.getAttribute("width")+"px") : (img.width ? (img.width + "px") : "62px"));
+          svg.style.height = (img.getAttribute("height") ? (img.getAttribute("height")+"px") : (img.height ? (img.height + "px") : "62px"));
+          svg.style.borderRadius = "10px";
+          svg.style.background = "rgba(57,169,0,0.10)";
+          svg.style.border = "1px solid rgba(57,169,0,0.25)";
+          svg.style.color = "#14532d";
+          svg.style.fontWeight = "950";
+          svg.style.fontSize = "0.9rem";
+          svg.textContent = "SENA";
+          img.replaceWith(svg);
+        }, { once: true });
       }
 
       function getRefYear(){
@@ -1661,6 +1724,8 @@ const btnApply = document.getElementById("btnApply");
         const img = document.createElement("img");
         img.src = "https://www.sena.edu.co/Style%20Library/alayout/images/logoSena.png";
         img.alt = "Logo SENA";
+        img.className = "sena-logo";
+        ensureLogoFallback(img);
 
         const lines = document.createElement("div");
         lines.className = "brand-lines";
@@ -1679,7 +1744,7 @@ const btnApply = document.getElementById("btnApply");
         const title = document.createElement("div");
         title.className = "title";
         const year = (elYearRef.value || "").toString().trim() || String(new Date().getFullYear());
-        title.textContent = `Calendario de Cumpleaños ${year}`;
+        title.textContent = `Calendario de Eventos ${year}`;
 
         const rep = document.createElement("div");
         rep.className = "report-badges";
@@ -1736,9 +1801,13 @@ const btnApply = document.getElementById("btnApply");
           const requiredCells = group.length + extraCells;
 
           // Filas necesarias según consumo por spans
-          const rows = Math.max(base.rows, Math.ceil(requiredCells / base.cols));
+          // En modo 4 hojas (Letter horizontal), forzamos 2 columnas para mejorar lectura y evitar saturación
+          const cols = (pages >= 4) ? Math.min(2, base.cols) : base.cols;
+          const baseRows = (pages >= 4) ? Math.ceil(group.length / cols) : base.rows;
 
-          grid.style.setProperty("--cols", base.cols);
+          const rows = Math.max(baseRows, Math.ceil(requiredCells / cols));
+
+          grid.style.setProperty("--cols", cols);
           grid.style.setProperty("--rows", rows);
 
           for(const mc of group){
@@ -1938,6 +2007,13 @@ btnPreview.addEventListener("click", togglePreview);
           fitPreview();
         }
       });
+
+      // Fallback para logos (si está offline o bloqueado por CORS)
+      document.querySelectorAll('img.sena-logo').forEach(ensureLogoFallback);
+
+      // Descargas: guarda+renderiza antes de exportar
+      if(btnDownloadHtml) btnDownloadHtml.addEventListener("click", () => { save(); apply(); exportCurrentHTML(); });
+      if(btnDownloadTxt) btnDownloadTxt.addEventListener("click", exportTxt);
 
       load();
     })();
