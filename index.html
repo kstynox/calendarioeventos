@@ -535,11 +535,12 @@
     }
     /* In preview mode we want to apply the print page layout, but visible on screen */
     html.preview-mode .print-page{
-      height: calc(215.9mm - (var(--pm) * 2));
+      height: calc(215.9mm - (var(--pm) * 2) - 0.3mm);
       display:flex;
       flex-direction:column;
+      overflow: hidden;
     }
-    html.preview-mode .page-header-print{
+html.preview-mode .page-header-print{
       height: var(--ph);
       display:grid;
       grid-template-columns: 1.25fr 0.75fr;
@@ -616,7 +617,7 @@
     html.preview-mode .print-grid .month-card.tall-2{ grid-row: span 2; }
     html.preview-mode .print-grid .month-card.tall-3{ grid-row: span 3; }
 
-    /* PDF preview: enforce one-line clamp for stability (only preview) */
+    /* PDF preview: clamp 2 lines in narrow columns (cols-2/cols-3) */
     html.preview-mode .print-grid .name-text{
       display:-webkit-box;
       -webkit-line-clamp: 1;
@@ -624,8 +625,13 @@
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
+    html.preview-mode .print-grid .month-card__body.cols-2 .name-text,
+    html.preview-mode .print-grid .month-card__body.cols-3 .name-text{
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+    }
 
-    /* ==========================
+/* ==========================
        PRINT (PDF)
        ========================== */
     @media print{
@@ -638,7 +644,8 @@
 
       html, body{
         width: 279.4mm;
-        height: 215.9mm;
+        height: auto !important;
+        margin: 0 !important;
         padding: 0 !important;
         background:#fff !important;
       }
@@ -655,10 +662,14 @@
       .print-pages{ margin: 0; }
 
       /* Evita hoja en blanco al final en exportación a PDF */
+      /* Nota: en Chrome/Edge a veces se genera una hoja extra por redondeos de mm→px.
+         Reducimos ligeramente la altura y ocultamos overflow. */
+      .print-pages{ margin: 0 !important; padding: 0 !important; }
       .print-page{
-        height: calc(215.9mm - (var(--pm) * 2));
+        height: calc(215.9mm - (var(--pm) * 2) - 0.3mm); /* -epsilon */
         display:flex;
         flex-direction:column;
+        overflow: hidden;
         break-after: auto;
         page-break-after: auto;
       }
@@ -666,8 +677,11 @@
         break-after: page;
         page-break-after: always;
       }
-
-      .page-header-print{
+      .print-pages > .print-page:last-child{
+        break-after: auto !important;
+        page-break-after: auto !important;
+      }
+.page-header-print{
         height: var(--ph);
         display:grid;
         grid-template-columns: 1.25fr 0.75fr;
@@ -763,17 +777,23 @@
       }
       .print-grid .who{ gap: 1.5mm; }
 
-      /* PDF: clamp 1 line para estabilidad (evita romper alturas) */
+      /* PDF: clamp 2 lines in narrow columns (cols-2/cols-3) */
       .print-grid .name-text{
         font-size: var(--p-name);
         line-height: 1.1;
         display:-webkit-box;
         -webkit-line-clamp: 1;
-      line-clamp: 1;
+        line-clamp: 1;
         -webkit-box-orient: vertical;
         overflow: hidden;
       }
-      .print-grid .meta{ display:none; }
+      .print-grid .month-card__body.cols-2 .name-text,
+      .print-grid .month-card__body.cols-3 .name-text{
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+      }
+
+.print-grid .meta{ display:none; }
 
       /* 3 columnas internas (>10 registros): badge también se hace más pequeño */
       .print-grid .month-card__body.cols-3 .name-text{ font-size: calc(var(--p-name) - 0.08rem); }
