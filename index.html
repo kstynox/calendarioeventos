@@ -1702,7 +1702,15 @@ const btnApply = document.getElementById("btnApply");
         const ages = [];
         for(const e of allEntries){
           const a = ageNumber(e.year);
-          if(a !== null) ages.push({ age: a, name: e.name });
+          if(a !== null){
+            ages.push({
+              age: a,
+              name: e.name,
+              year: e.year,
+              month: e.month,
+              day: e.day
+            });
+          }
         }
 
         let avgAgeText = "N/D";
@@ -1718,12 +1726,31 @@ const btnApply = document.getElementById("btnApply");
           let minAge = ages[0].age;
           let maxAge = ages[0].age;
 
+          // Comparador: fecha de nacimiento (más reciente = más joven)
+          const isLaterBirth = (a, b) => {
+            if(a.year !== b.year) return a.year > b.year;
+            if(a.month !== b.month) return a.month > b.month;
+            return a.day > b.day;
+          };
+
           for(const x of ages){
             if(x.age < minAge) minAge = x.age;
             if(x.age > maxAge) maxAge = x.age;
 
+            // Más joven = menor edad; si empata edad, gana el que nació MÁS TARDE
             if(x.age < youngest.age) youngest = x;
-            else if(x.age === youngest.age && x.name.localeCompare(youngest.name, "es", { sensitivity:"base" }) < 0) youngest = x;
+            else if(x.age === youngest.age){
+              if(isLaterBirth(x, youngest)) youngest = x;
+              else if(
+                x.year === youngest.year &&
+                x.month === youngest.month &&
+                x.day === youngest.day &&
+                x.name.localeCompare(youngest.name, "es", { sensitivity:"base" }) < 0
+              ){
+                // si empata hasta la fecha exacta, desempate por nombre
+                youngest = x;
+              }
+            }
           }
 
           youngestNameText = youngest.name;
